@@ -12,7 +12,7 @@ app.post('/callback', async (req, res) => {
 
     console.log('Callback received. Status:', status);
 
-    if ((status === 1 || status === 2 || status === 6) && downloadUri) {
+    if (status === 2 || status === 6) {
         try {
             // Stáhneme PPTX soubor jako arraybuffer
             const fileResponse = await axios.get(downloadUri, { responseType: 'arraybuffer' });
