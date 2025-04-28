@@ -13,8 +13,8 @@ app.post('/callback', async (req, res) => {
     console.log(`Callback received. Status: ${status}`);
 
     if (status === 1 || status === 2 || status === 6) {
-        if (!downloadUri) {
-            console.log('No downloadUri yet, waiting...');
+        if (!downloadUri || downloadUri.includes('127.0.0.1')) {
+            console.log('No valid downloadUri yet, waiting...');
             return res.json({ error: 0 });
         }
 
