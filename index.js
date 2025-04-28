@@ -1,8 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+const { put } = require('@vercel/blob'); // Blob storage upload
 
 const app = express();
 app.use(bodyParser.json());
@@ -13,19 +12,33 @@ app.post('/callback', async (req, res) => {
 
     console.log('Callback received. Status:', status);
 
-    if (status === 2 || status === 6) { // 2 = manually saved, 6 = auto saved
+    if (status === 2 || status === 6) {
         try {
-            const fileData = await axios.get(downloadUri, { responseType: 'arraybuffer' });
-            fs.writeFileSync('/tmp/myfile-latest.pptx', fileData.data);
-            console.log('File saved to /tmp/myfile-latest.pptx');
-        } catch (err) {
-            console.error('Download error:', err);
-        }
-    }
+            // Stáhneme PPTX soubor jako arraybuffer
+            const fileResponse = await axios.get(downloadUri, { responseType: 'arraybuffer' });
 
-    res.json({ error: 0 });
+            // Název souboru s timestampem
+            const fileName = `presentation-${Date.now()}.pptx`;
+
+            // Nahrajeme soubor na Vercel Blob Storage
+            const blob = await put(fileName, fileResponse.data, {
+                access: 'public', // aby byl přístupný zvenčí
+            });
+
+            console.log('✅ File uploaded to Blob Storage:', blob.url);
+
+            // Odpovíme klientovi
+            res.json({ error: 0, uploadedUrl: blob.url });
+        } catch (err) {
+            console.error('Upload error:', err);
+            res.status(500).send('Failed to upload to Blob Storage');
+        }
+    } else {
+        res.json({ error: 0 });
+    }
 });
 
+// Root route
 app.get('/', (req, res) => {
     res.send('OnlyOffice Callback Backend běží!');
 });
