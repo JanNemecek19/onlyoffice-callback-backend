@@ -1,3 +1,4 @@
+const { extractContentFromPptx } = require('./extractContentFromPptx');
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
@@ -12,11 +13,13 @@ app.post('/callback', async (req, res) => {
 
     console.log('Callback received. Status:', status);
 
-    if (status === 2 || status === 6) { // 2 = ulozeno manualne, 6 = ulozeno natvrdo
+    if (status === 2 || status === 6) {
         try {
             const fileData = await axios.get(downloadUri, { responseType: 'arraybuffer' });
             fs.writeFileSync('/tmp/myfile-latest.pptx', fileData.data);
             console.log('File saved to /tmp/myfile-latest.pptx');
+
+            await extractContentFromPptx('/tmp/myfile-latest.pptx');
         } catch (err) {
             console.error('Download error:', err);
         }
