@@ -22,10 +22,10 @@ app.post('/callback', async (req, res) => {
             const fileData = await axios.get(downloadUri, { responseType: 'arraybuffer' });
             const fileName = `presentation-${Date.now()}.pptx`;
 
-            await put(fileName, fileData.data, { access: 'public' });
-            console.log(`File uploaded successfully: ${fileName}`);
+            const { url } = await put(fileName, fileData.data, { access: 'public' });
+            console.log(`File uploaded successfully: ${url}`);
 
-            return res.json({ error: 0, uploadedUrl: `${process.env.BLOB_PUBLIC_URL}/${fileName}` });
+            return res.json({ error: 0, uploadedUrl: url });
         } catch (err) {
             console.error('Upload error:', err.message);
             return res.status(500).json({ error: 'Upload failed' });
