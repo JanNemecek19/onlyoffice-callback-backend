@@ -12,7 +12,7 @@ app.post('/callback', async (req, res) => {
 
     console.log('Callback received. Status:', status);
 
-    if (status === 2 || status === 6) {
+    if (status === 1 || status === 2 || status === 6) {
         try {
             // Stáhneme PPTX soubor jako arraybuffer
             const fileResponse = await axios.get(downloadUri, { responseType: 'arraybuffer' });
@@ -25,7 +25,7 @@ app.post('/callback', async (req, res) => {
                 access: 'public', // aby byl přístupný zvenčí
             });
 
-            console.log('✅ File uploaded to Blob Storage:', blob.url);
+            console.log('File uploaded to Blob Storage:', blob.url);
 
             // Odpovíme klientovi
             res.json({ error: 0, uploadedUrl: blob.url });
