@@ -10,31 +10,29 @@ app.post('/callback', async (req, res) => {
     const status = req.body.status;
     const downloadUri = req.body.url;
 
-    console.log('Callback received. Status:', status);
+    console.log(`Callback received. Status: ${status}`);
 
-    if (status === 2 || status === 6) {
+    if (status === 1 || status === 2 || status === 6) {
+        if (!downloadUri) {
+            console.log('No downloadUri yet, waiting...');
+            return res.json({ error: 0 });
+        }
+
         try {
-            // Stáhneme PPTX soubor jako arraybuffer
-            const fileResponse = await axios.get(downloadUri, { responseType: 'arraybuffer' });
-
-            // Název souboru s timestampem
+            const fileData = await axios.get(downloadUri, { responseType: 'arraybuffer' });
             const fileName = `presentation-${Date.now()}.pptx`;
 
-            // Nahrajeme soubor na Vercel Blob Storage
-            const blob = await put(fileName, fileResponse.data, {
-                access: 'public', // aby byl přístupný zvenčí
-            });
+            await put(fileName, fileData.data, { access: 'public' });
+            console.log(`File uploaded successfully: ${fileName}`);
 
-            console.log('File uploaded to Blob Storage:', blob.url);
-
-            // Odpovíme klientovi
-            res.json({ error: 0, uploadedUrl: blob.url });
+            return res.json({ error: 0, uploadedUrl: `${process.env.BLOB_PUBLIC_URL}/${fileName}` });
         } catch (err) {
-            console.error('Upload error:', err);
-            res.status(500).send('Failed to upload to Blob Storage');
+            console.error('Upload error:', err.message);
+            return res.status(500).json({ error: 'Upload failed' });
         }
     } else {
-        res.json({ error: 0 });
+        console.log(`Ignoring callback with status ${status}`);
+        return res.json({ error: 0 });
     }
 });
 
