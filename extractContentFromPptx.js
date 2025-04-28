@@ -1,6 +1,6 @@
 const AdmZip = require('adm-zip');
 const xml2js = require('xml2js');
-const fsPromises = require('fs').promises;
+const fs = require('fs').promises;
 const path = require('path');
 
 async function extractContentFromPptx(pptxPath) {
@@ -19,6 +19,7 @@ async function extractContentFromPptx(pptxPath) {
         const slideXml = slideEntry.getData().toString('utf8');
         const parsedSlide = await parser.parseStringPromise(slideXml);
 
+        // Vytahni vsechny texty z <a:t> tagu
         const texts = [];
         function extractTexts(obj) {
             if (typeof obj !== 'object') return;
@@ -37,11 +38,15 @@ async function extractContentFromPptx(pptxPath) {
         const title = texts.length > 0 ? texts[0] : '';
         const text = texts.length > 1 ? texts.slice(1).join(' ') : '';
 
-        extractedContent.push({ title, text });
+        extractedContent.push({
+            title,
+            text
+        });
     }
 
+    // Asynchronni zapis souboru!
     const outputJsonPath = '/tmp/content.json';
-    await fsPromises.writeFile(outputJsonPath, JSON.stringify(extractedContent, null, 2));
+    await fs.writeFile(outputJsonPath, JSON.stringify(extractedContent, null, 2));
 
     console.log('Extraction done. Saved to /tmp/content.json');
 }
