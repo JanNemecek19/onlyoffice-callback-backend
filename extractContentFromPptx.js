@@ -1,16 +1,16 @@
 const AdmZip = require('adm-zip');
 const xml2js = require('xml2js');
-const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
 
 async function extractContentFromPptx(pptxPath) {
     const extractedContent = [];
 
-    // Unwrap PPTX archive
+    // Rozbal PPTX archiv
     const zip = new AdmZip(pptxPath);
     const zipEntries = zip.getEntries();
 
-    // Find all slides
+    // Najdi vsechny slidy
     const slideFiles = zipEntries.filter((entry) => entry.entryName.startsWith('ppt/slides/slide') && entry.entryName.endsWith('.xml'));
 
     const parser = new xml2js.Parser();
@@ -19,7 +19,6 @@ async function extractContentFromPptx(pptxPath) {
         const slideXml = slideEntry.getData().toString('utf8');
         const parsedSlide = await parser.parseStringPromise(slideXml);
 
-        // Get all texts from <a:t> tag
         const texts = [];
         function extractTexts(obj) {
             if (typeof obj !== 'object') return;
@@ -38,14 +37,11 @@ async function extractContentFromPptx(pptxPath) {
         const title = texts.length > 0 ? texts[0] : '';
         const text = texts.length > 1 ? texts.slice(1).join(' ') : '';
 
-        extractedContent.push({
-            title,
-            text
-        });
+        extractedContent.push({ title, text });
     }
 
     const outputJsonPath = '/tmp/content.json';
-    fs.writeFileSync(outputJsonPath, JSON.stringify(extractedContent, null, 2));
+    await fsPromises.writeFile(outputJsonPath, JSON.stringify(extractedContent, null, 2));
 
     console.log('Extraction done. Saved to /tmp/content.json');
 }
