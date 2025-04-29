@@ -22,15 +22,15 @@ app.post('/callback', async (req, res) => {
         }
 
         try {
-            // Stáhni PPTX soubor
+            // Download PPTX file
             const fileResponse = await axios.get(downloadUri, { responseType: 'arraybuffer' });
             const pptxPath = `/tmp/presentation-${Date.now()}.pptx`;
             fs.writeFileSync(pptxPath, fileResponse.data);
 
-            // Spusť extrakci obsahu
+            // Start extraction of content
             await extractContentFromPptx(pptxPath);
 
-            // Nahraj JSON soubor do Vercel Blob
+            // Upload JSON file to Vercel Blob
             const jsonBuffer = fs.readFileSync('/tmp/content.json');
             const { url: uploadedUrl } = await put(`extracted-${Date.now()}.json`, jsonBuffer, {
                 access: 'public'
