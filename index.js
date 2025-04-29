@@ -1,7 +1,10 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const { put } = require('@vercel/blob'); // Blob storage upload
+const fs = require('fs');
+const path = require('path');
+const { put } = require('@vercel/blob');
+const { extractContentFromPptx } = require('./extractContentFromPptx');
 
 const app = express();
 app.use(bodyParser.json());
@@ -12,23 +15,32 @@ app.post('/callback', async (req, res) => {
 
     console.log(`Callback received. Status: ${status}`);
 
-    if (status === 1 || status === 2 || status === 6) {
+    if ([1, 2, 6].includes(status)) {
         if (!downloadUri || downloadUri.includes('127.0.0.1')) {
             console.log('No valid downloadUri yet, waiting...');
             return res.json({ error: 0 });
         }
 
         try {
-            const fileData = await axios.get(downloadUri, { responseType: 'arraybuffer' });
-            const fileName = `presentation-${Date.now()}.pptx`;
+            // Stáhni PPTX soubor
+            const fileResponse = await axios.get(downloadUri, { responseType: 'arraybuffer' });
+            const pptxPath = `/tmp/presentation-${Date.now()}.pptx`;
+            fs.writeFileSync(pptxPath, fileResponse.data);
 
-            const { url } = await put(fileName, fileData.data, { access: 'public' });
-            console.log(`File uploaded successfully: ${url}`);
+            // Spusť extrakci obsahu
+            await extractContentFromPptx(pptxPath);
 
-            return res.json({ error: 0, uploadedUrl: url });
+            // Nahraj JSON soubor do Vercel Blob
+            const jsonBuffer = fs.readFileSync('/tmp/content.json');
+            const { url: uploadedUrl } = await put(`extracted-${Date.now()}.json`, jsonBuffer, {
+                access: 'public'
+            });
+
+            console.log(`Uploaded extracted JSON to: ${uploadedUrl}`);
+            return res.json({ error: 0, uploadedUrl });
         } catch (err) {
-            console.error('Upload error:', err.message);
-            return res.status(500).json({ error: 'Upload failed' });
+            console.error('Processing or upload error:', err.message);
+            return res.status(500).json({ error: 'Extraction or upload failed' });
         }
     } else {
         console.log(`Ignoring callback with status ${status}`);
@@ -36,7 +48,6 @@ app.post('/callback', async (req, res) => {
     }
 });
 
-// Root route
 app.get('/', (req, res) => {
     res.send('OnlyOffice Callback Backend běží!');
 });
